@@ -1,0 +1,59 @@
+name: Build OpenSlinky
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+  workflow_dispatch:
+
+jobs:
+  build-client:
+    name: Build SlinkyClient (Java)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+
+      - name: Make gradlew executable
+        run: chmod +x SlinkyClient/gradlew
+
+      - name: Build client with Gradle
+        working-directory: SlinkyClient
+        run: ./gradlew build --no-daemon
+
+      - name: Upload Client JARs
+        uses: actions/upload-artifact@v4
+        with:
+          name: SlinkyClient-jars
+          path: SlinkyClient/build/libs/*.jar
+
+  build-native:
+    name: Build Loader & Native DLL (MSVC)
+    runs-on: windows-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up MSVC
+        uses: ilammy/msvc-dev-cmd@v1
+
+      - name: Configure CMake
+        run: cmake -B build -A x64
+
+      - name: Build Slinky & SlinkyNative
+        run: cmake --build build --config Release
+
+      - name: Upload Native Binaries
+        uses: actions/upload-artifact@v4
+        with:
+          name: Slinky-binaries
+          path: |
+            build/bin/Release/Slinky.exe
+            build/bin/Release/SlinkyNative.dll
